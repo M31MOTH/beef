@@ -1,12 +1,12 @@
 #
-# Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+# Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 # Browser Exploitation Framework (BeEF) - http://beefproject.com
 # See the file 'doc/COPYING' for copying permission
 #
 # BeEF Configuration file
 
 beef:
-    version: '0.4.6.1-alpha'
+    version: '0.4.7.0-alpha'
     # More verbose messages (server-side)
     debug: false
     # More verbose messages (client-side)
@@ -68,6 +68,7 @@ beef:
             secure: true
             secure_port: 61986 # WSSecure
             ws_poll_timeout: 1000 # poll BeEF every second
+            ws_connect_timeout: 500 # useful to help fingerprinting finish before establishing the WS channel
 
         # Imitate a specified web server (default root page, 404 default error page, 'Server' HTTP response header)
         web_server_imitation:
@@ -75,7 +76,6 @@ beef:
             type: "apache" # Supported: apache, iis, nginx
             hook_404: false # inject BeEF hook in HTTP 404 responses
             hook_root: false # inject BeEF hook in the server home page
-
         # Experimental HTTPS support for the hook / admin / all other Thin managed web services
         https:
             enable: false
@@ -102,10 +102,10 @@ beef:
 
         # db connection information is only used for mysql/postgres
         db_host: "localhost"
-        db_port: 5432
+        db_port: 3306
         db_name: "beef"
         db_user: "beef"
-        db_passwd: "beef123"
+        db_passwd: "beef"
         db_encoding: "UTF-8"
 
     # Credentials to authenticate in BeEF.
@@ -114,12 +114,18 @@ beef:
         user:   "beef"
         passwd: "beef"
 
-    # Autorun modules as soon the browser is hooked.
-    # NOTE: only modules with target type 'working' or 'user_notify' can be run automatically.
+    # Autorun Rule Engine
     autorun:
-        enable: true
-        # set this to TRUE if you want to allow auto-run execution for modules with target->user_notify
-        allow_user_notify: true
+        # this is used when rule chain_mode type is nested-forward, needed as command results are checked via setInterval
+        # to ensure that we can wait for async command results. The timeout is needed to prevent infinite loops or eventually
+        # continue execution regardless of results.
+        # If you're chaining multiple async modules, and you expect them to complete in more than 5 seconds, increase the timeout.
+        result_poll_interval: 300
+        result_poll_timeout: 5000
+
+        # If the modules doesn't return status/results and timeout exceeded, continue anyway with the chain.
+        # This is useful to call modules (nested-forward chain mode) that are not returning their status/results.
+        continue_after_timeout: true
 
     # Enables DNS lookups on zombie IP addresses
     dns_hostname_lookup: false
@@ -158,6 +164,9 @@ beef:
                 enable: false
         ipec:
             enable: true
-        # this is still experimental, we're working on it..
+        # this is still experimental..
         dns:
             enable: true
+        # this is still experimental..
+        dns_rebinding:
+            enable: false

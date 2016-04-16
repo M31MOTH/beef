@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+# Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 # Browser Exploitation Framework (BeEF) - http://beefproject.com
 # See the file 'doc/COPYING' for copying permission
 #
@@ -85,7 +85,7 @@ module BeEF
                   }
                 }
                 if (peerid == null) {
-                  console.log('received a peer message, but, we are already setup?');
+                  beef.debug('received a peer message, but, we are already setup?');
                 } else {
                   beefrtcs[peerid].processMessage(
                     JSON.stringify(#{output})

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+# Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 # Browser Exploitation Framework (BeEF) - http://beefproject.com
 # See the file 'doc/COPYING' for copying permission
 #
@@ -12,8 +12,8 @@ end
 
 # @note Prevent system from ever being used
 def system(args)
-  puts "For security reasons the system method is not accepted in the Browser Exploitation Framework code base."
-  exit
+ puts "For security reasons the system method is not accepted in the Browser Exploitation Framework code base."
+ exit
 end
 
 # @note Prevent Kernel.system from ever being used

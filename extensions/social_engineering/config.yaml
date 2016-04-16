@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+# Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 # Browser Exploitation Framework (BeEF) - http://beefproject.com
 # See the file 'doc/COPYING' for copying permission
 #
@@ -50,6 +50,6 @@ beef:
                           cid10: "bottom-border.png"
             powershell:
                 # the default payload being used is windows/meterpreter/reverse_https
-                msf_reverse_handler_host: "127.0.0.1"
+                msf_reverse_handler_host: "172.16.45.1"
                 msf_reverse_handler_port: "443"
                 powershell_handler_url: "/ps"

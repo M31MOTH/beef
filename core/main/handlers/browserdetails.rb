@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+# Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 # Browser Exploitation Framework (BeEF) - http://beefproject.com
 # See the file 'doc/COPYING' for copying permission
 #
@@ -180,7 +180,7 @@ module BeEF
               if config.get("beef.extension.network.enable") == true
                 if proxy_server =~ /^([\d\.]+):([\d]+)$/
                   print_debug("Hooked browser [id:#{zombie.id}] is using a proxy [ip: #{$1}]")
-                  BeEF::Core::Models::NetworkHost.add(:hooked_browser_id => session_id, :ip => $1, :type => 'Proxy', :cid => 'init')
+                  BeEF::Core::Models::NetworkHost.add(:hooked_browser_id => session_id, :ip => $1, :type => 'Proxy')
                 end
               end
             end
@@ -215,13 +215,17 @@ module BeEF
             self.err_msg "Invalid cookies returned from the hook browser's initial connection."
           end
 
-          # get and store the os name
+          # get and store the OS name
           os_name = get_param(@data['results'], 'OsName')
           if BeEF::Filters.is_valid_osname?(os_name)
             BD.set(session_id, 'OsName', os_name)
           else
             self.err_msg "Invalid operating system name returned from the hook browser's initial connection."
           end
+
+          # get and store the OS version (without checks as it can be very different or even empty, for instance on linux/bsd)
+          os_version = get_param(@data['results'], 'OsVersion')
+          BD.set(session_id, 'OsVersion', os_version)
 
           # get and store default browser
           default_browser = get_param(@data['results'], 'DefaultBrowser')
@@ -347,45 +351,30 @@ module BeEF
             self.err_msg "Invalid value for TouchEnabled returned from the hook browser's initial connection."
           end
 
-          # log a few info of newly hooked zombie in the console
-          print_info "New Hooked Browser [id:#{zombie.id}, ip:#{zombie.ip}, type:#{browser_name}-#{browser_version}, os:#{os_name}], hooked domain [#{log_zombie_domain}:#{log_zombie_port.to_s}]"
-
-          # add localhost as network host
-          if config.get('beef.extension.network.enable')
-            print_debug("Hooked browser has network interface 127.0.0.1")
-            BeEF::Core::Models::NetworkHost.add(:hooked_browser_id => session_id, :ip => '127.0.0.1', :hostname => 'localhost', :os => BeEF::Core::Models::BrowserDetails.get(session_id, 'OsName'), :cid => 'init')
-          end
-
-          # Call autorun modules
-          if config.get('beef.autorun.enable')
-            autorun = []
-            BeEF::Core::Configuration.instance.get('beef.module').each { |k, v|
-              if v.has_key?('autorun') and v['autorun'] == true
-                target_status = BeEF::Module.support(k, {'browser' => browser_name, 'ver' => browser_version, 'os' => os_name})
-                if target_status == BeEF::Core::Constants::CommandModule::VERIFIED_WORKING
-                  BeEF::Module.execute(k, session_id)
-                  autorun.push(k)
-                elsif target_status == BeEF::Core::Constants::CommandModule::VERIFIED_USER_NOTIFY and config.get('beef.autorun.allow_user_notify')
-                  BeEF::Module.execute(k, session_id)
-                  autorun.push(k)
-                else
-                  print_debug "Autorun attempted to execute unsupported module '#{k}' against Hooked browser [id:#{zombie.id}, ip:#{zombie.ip}, type:#{browser_name}-#{browser_version}, os:#{os_name}]"
-                end
-              end
-            }
-            if autorun.length > 0
-              print_info "Autorun executed[#{autorun.join(', ')}] against Hooked browser [id:#{zombie.id}, ip:#{zombie.ip}, type:#{browser_name}-#{browser_version}, os:#{os_name}]"
-            end
-          end
-
           if config.get('beef.integration.phishing_frenzy.enable')
             # get and store the browser plugins
             victim_uid = get_param(@data['results'], 'PhishingFrenzyUID')
+            print_debug "PhishingFrenzy victim UID is #{victim_uid}"
             if BeEF::Filters.alphanums_only?(victim_uid)
               BD.set(session_id, 'PhishingFrenzyUID', victim_uid)
             else
               self.err_msg "Invalid PhishingFrenzy Victim UID returned from the hook browser's initial connection."
             end
+          end
+
+          # log a few info of newly hooked zombie in the console
+          print_info "New Hooked Browser [id:#{zombie.id}, ip:#{zombie.ip}, browser:#{browser_name}-#{browser_version}, os:#{os_name}-#{os_version}], hooked domain [#{log_zombie_domain}:#{log_zombie_port.to_s}]"
+
+          # add localhost as network host
+          if config.get('beef.extension.network.enable')
+            print_debug("Hooked browser has network interface 127.0.0.1")
+            BeEF::Core::Models::NetworkHost.add(:hooked_browser_id => session_id, :ip => '127.0.0.1', :hostname => 'localhost', :os => BeEF::Core::Models::BrowserDetails.get(session_id, 'OsName'))
+          end
+
+          # check if any ARE rules shall be triggered only if the channel is != WebSockets (XHR). If the channel
+          # is WebSockets, then ARe rules are triggered after channel is established.
+          unless config.get("beef.http.websocket.enable")
+            BeEF::Core::AutorunEngine::Engine.instance.run(zombie.id, browser_name, browser_version, os_name, os_version)
           end
         end
 
@@ -398,4 +387,5 @@ module BeEF
     end
   end
 end
+
 

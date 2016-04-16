@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+# Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 # Browser Exploitation Framework (BeEF) - http://beefproject.com
 # See the file 'doc/COPYING' for copying permission
 #
@@ -45,9 +45,66 @@ task :msf => ["install", "msf_install"] do
   Rake::Task['msf_stop'].invoke
 end
 
+desc 'Generate API documentation to doc/rdocs/index.html'
+task :rdoc do
+  Rake::Task['rdoc:rerdoc'].invoke
+end
+
+
+################################
+# run bundle-audit
+
+namespace :bundle_audit do
+  require 'bundler/audit/cli'
+
+  desc 'Update bundle-audit database'
+  task :update do
+    Bundler::Audit::CLI.new.update
+  end
+
+  desc 'Check gems for vulns using bundle-audit'
+  task :check do
+    Bundler::Audit::CLI.new.check
+  end
+
+  desc 'Update vulns database and check gems using bundle-audit'
+  task :run do
+    Rake::Task['bundle_audit:update'].invoke
+    Rake::Task['bundle_audit:check'].invoke
+  end
+end
+
+desc "Run bundle-audit"
+task :bundle_audit do
+  Rake::Task['bundle_audit:run'].invoke
+end
+
+################################
+# rdoc
+
+namespace :rdoc do
+  require 'rdoc/task'
+
+  desc 'Generate API documentation to doc/rdocs/index.html'
+  Rake::RDocTask.new do |rd|
+    rd.rdoc_dir = 'doc/rdocs'
+    rd.main = 'README.mkd'
+    rd.rdoc_files.include('core/**/*\.rb')
+      #'extensions/**/*\.rb'
+      #'modules/**/*\.rb'
+    rd.options << '--line-numbers'
+    rd.options << '--all'
+  end
+end
+
+
+################################
+# Install
+
 #task :install do
 #  sh "export BEEF_TEST=true"
 #end
+
 
 ################################
 # X11 set up

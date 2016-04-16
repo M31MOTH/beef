@@ -1,19 +1,19 @@
 //
-// Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+// Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 // Browser Exploitation Framework (BeEF) - http://beefproject.com
 // See the file 'doc/COPYING' for copying permission
 //
 
 beef.execute(function() {
 
-	var hash   = '<%= @hash.gsub(/'/, "\\'") %>';
+	var hash   = beef.encode.base64.decode('<%= Base64.encode64(@hash).delete("\n") %>');
 	var result = '';
 
         // validate hash
         var re = /^[0-9a-f]{32}$/i;
         var valid_hash = re.exec(hash);
         if (!valid_hash) {
-                beef.net.send('<%= @command_url %>', <%= @command_id %>, 'fail=invalid MD5 hash');
+                beef.net.send('<%= @command_url %>', <%= @command_id %>, 'fail=invalid MD5 hash', beef.are.status_error());
                 return;
         }
 
@@ -37,7 +37,7 @@ beef.execute(function() {
 				}
 			}
 			if (!result) {
-				beef.net.send('<%= @command_url %>', <%= @command_id %>, "hash="+hash+"&fail=no results");
+				beef.net.send('<%= @command_url %>', <%= @command_id %>, "hash="+hash+"&fail=no results", beef.are.status_error());
 			} else {
 				beef.net.send('<%= @command_url %>', <%= @command_id %>, "hash="+hash+"&result="+result);
 			}

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+// Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 // Browser Exploitation Framework (BeEF) - http://beefproject.com
 // See the file 'doc/COPYING' for copying permission
 //
@@ -12,21 +12,29 @@ beef.hardware = {
    * @return: {String} CPU type
    **/
   cpuType: function() {
-    // IE
-    if (typeof navigator.cpuClass != 'undefined') {
-      cpu = navigator.cpuClass;
-      if (cpu == "x86")   return "32-bit";
-      if (cpu == "68K")   return "Motorola 68K";
-      if (cpu == "PPC")   return "Motorola PPC";
-      if (cpu == "Alpha") return "Digital";
-      if (this.ua.match('Win64; IA64')) return "64-bit (Intel)";
-      if (this.ua.match('Win64; x64'))  return "64-bit (AMD)";
-    // Firefox
-        } else if (typeof navigator.oscpu != 'undefined') {
-      if (navigator.oscpu.match('(WOW64|x64|x86_64)')) return "64-bit";
+    var arch = 'UNKNOWN';
+    // note that actually WOW64 means IE 32bit and Windows 64 bit. we are more interested
+    // in detecting the OS arch rather than the browser build
+    if (navigator.userAgent.match('(WOW64|x64|x86_64)') || navigator.platform.toLowerCase() == "win64"){
+      arch = 'x86_64';
+    }else if(typeof navigator.cpuClass != 'undefined'){
+      switch (navigator.cpuClass) {
+        case '68K':
+          arch = 'Motorola 68K';
+          break;
+        case 'PPC':
+          arch = 'Motorola PPC';
+          break;
+        case 'Digital':
+          arch = 'Alpha';
+          break;
+        default:
+          arch = 'x86';
+      }
     }
-    if (navigator.platform.toLowerCase() == "win64") return "64-bit";
-    return "32-bit";
+    // TODO we can infer the OS is 64 bit, if we first detect the OS type (os.js).
+    // For example, if OSX is at least 10.7, most certainly is 64 bit.
+    return arch;
   },
 
   /*

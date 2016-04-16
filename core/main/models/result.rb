@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2006-2015 Wade Alcorn - wade@bindshell.net
+# Copyright (c) 2006-2016 Wade Alcorn - wade@bindshell.net
 # Browser Exploitation Framework (BeEF) - http://beefproject.com
 # See the file 'doc/COPYING' for copying permission
 #
@@ -15,6 +15,7 @@ module Models
   
     property :id, Serial
     property :date, String, :length => 15, :lazy => false
+    property :status, Integer
     property :data, Text
   
   end
